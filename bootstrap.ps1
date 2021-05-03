@@ -13,6 +13,14 @@ Running this script with admin-priviledges should restore the setup to it's defa
 #>
 
 # Modules required byt these scripts.
+
+trap {
+    "An unhandled exception occured:" | Write-Host
+    Write-Host $_
+    Stop-Transcript -ErrorAction SilentlyContinue
+    return
+}
+
 $moduleNames = @("ShoutOut", "ACGCore")
 
 $versionURL = "https://raw.githubusercontent.com/CornerstoneIT/prod-scripts/master/version"
@@ -178,8 +186,6 @@ if ($installNew) {
     }
 
 }
-
-# TODO: Create Scheduled tasks
 
 $validateTask = {
     <# A task already exists, verify that it is correct:
