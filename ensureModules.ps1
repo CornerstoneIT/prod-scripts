@@ -11,7 +11,10 @@ $logfile = '{0}/AppData/local/logs/ensureModules.ps1.log' -f $env:USERPROFILE
 Start-Transcript -Path $logfile -Force
 
 # Modules required byt these scripts.
-$moduleNames = @("ShoutOut", "ACGCore")
+$moduleNames = @(
+    "ShoutOut",
+    "ACGCore"
+)
 
 "Confirming that Microsoft Code-signing cert is installed..." | Write-Host
 $storePath = "Cert:\CurrentUser\TrustedPublisher"
@@ -37,6 +40,24 @@ if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a294
 
 # TODO: Verify that PSGallery is registered as a repository and set it as "trusted"
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
+
+# Make sure that we do not use the old 1.0.0.1 version of PowerShellGet
+Remove-Module PowerShellGet
+Import-Module PowerShellGet
+$m = Get-Module PowerShellGet
+if ($m.version -eq "1.0.0.1") {
+    "We are using the old 1.0.0.1 version of PowerShellGet, trying to install a later version...." | Write-Host
+    try {
+        Install-Module PowerShellGet -AllowClobber -Force -Scope CurrentUser
+        Remove-Module PowerShellGet
+        Import-Module PowerShellGet
+        $m = Get-Module PowerShellGet
+        "Now using version {0} of PowerShellGet." -f $m.Version | Write-Host
+    } catch {
+        "Failed to install PowerShellGet:" | Write-Host
+        $_ | Write-Host
+    }
+}
 
 "Verifying that modules are installed..." | Write-Host
 foreach($moduleName in $moduleNames) {
