@@ -12,8 +12,6 @@ Running this script with admin-priviledges should restore the setup to it's defa
  - Recreating all scheduled tasks.
 #>
 
-# Modules required byt these scripts.
-
 trap {
     "An unhandled exception occured:" | Write-Host
     Write-Host $_
@@ -21,12 +19,7 @@ trap {
     return
 }
 
-$moduleNames = @("ShoutOut", "ACGCore")
-
-$versionURL = "https://raw.githubusercontent.com/CornerstoneIT/prod-scripts/master/version"
-$archiveURL = "https://codeload.github.com/CornerstoneIT/prod-scripts/zip/refs/heads/master"
-$scriptsDirPath = '{0}\Cornerstone\prod-scripts' -f $env:ProgramData
-
+# Intended Directory structure:
 $directory = @{
     root = @{ path = '{0}\Cornerstone\prod-scripts' -f $env:ProgramData; type="folder" }
 }
@@ -34,49 +27,30 @@ $directory.active = @{ path = '{0}\active' -f $directory.root.path; type="juncti
 $directory.logs = @{ path = '{0}\logs' -f $directory.root.path; type="folder" }
 $directory.tmp = @{ path = '{0}\tmp' -f $directory.root.path; type="folder" }
 
-$logFile = '{0}\bootstrap.ps1.{1}.log' -f $directory.logs.path, (whoami -upn)
-
+# Scripts variables:
+$versionURL = "https://raw.githubusercontent.com/CornerstoneIT/prod-scripts/master/version"
+$archiveURL = "https://codeload.github.com/CornerstoneIT/prod-scripts/zip/refs/heads/master"
 $dlDstPath = "{0}\newscripts.zip" -f $directory.root.path
 
+# Logging variables: 
+$i = whoami.exe
+$d, $u = $i.split("\")
+$a = if ($u) {
+    "{0}@{1}" -f $u, $d
+} else {
+    $d
+}
+$logFile = '{0}\bootstrap.ps1.{1}.log' -f $directory.logs.path, $a
+
+# Scheduled Task settings:
 $scheduledTasksPath = "\cornerstone\"
 $scheduledTasks = @{
-    MountFileShares = @{ script = '{0}\MountFileShares.ps1' -f $directory.active.path }
+    "Cornerstone User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
 }
-
 
 Start-Transcript -Path $logFile
 
-# TODO: Verify that PSGallery is registered as a repository and set it as "trusted"
-Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
-
-"Verifying that modules are installed..." | Write-Host
-foreach($moduleName in $moduleNames) {
-
-    $module = Get-Module $moduleName -ListAvailable
-
-    if ($null -eq $module) {
-        # Module is not installed
-        try {
-            Install-Module $moduleName -AllowClobber -ea Stop
-            $module = Get-Module $moduleName -ListAvailable
-            "Installed module '{0}' (version: {1})" -f $moduleName, $module.version | Write-Host
-        } catch {
-            "Install of '{0}' failed." -f $moduleName  | Write-host -ForegroundColor Red
-            # TODO: Deal with it and quit.
-        }
-    } else {
-        try {
-            Update-Module $moduleName -ea Stop
-            $module = Get-Module $moduleName -ListAvailable
-            "'{0}' is up-to-date (version: {1})" -f $moduleName, $module.version | Write-Host
-        } catch {
-            "Failed to update '{0}'" -f $moduleName | Write-Host -ForegroundColor Red
-            # This may be ok, try to proceed with configuration.
-        }
-    }
-
-    # At this point the module should be installed.
-}
+# Ensure that we are not running as System 
 
 # Create the scripts directory
 "Creating folders..." | Write-Host
@@ -97,10 +71,14 @@ foreach($folderName in $directory.keys) {
             mkdir $folder.path
         } catch {
             "Failed to create scripts dir" | Write-Host
-            # TODO: Deal with it and quit.
+            "Quitting" | Write-Host
+            Stop-Transcript
+            return
         }
     }
 }
+
+
 
 <# Install the scripts
 Download new version of the scripts if:
@@ -260,7 +238,8 @@ foreach ($taskName in $scheduledTasks.Keys) {
         $trigger = New-ScheduledTaskTrigger -AtLogOn
         $principal = New-ScheduledTaskPrincipal -GroupId "Users" -RunLevel Highest
         $action = New-ScheduledTaskAction -Execute "Powershell" -Argument "-ExecutionPolicy Unrestricted -WindowStyle Hidden -File $($t.script)"
-        Register-Scheduledtask -TaskName $taskName -TaskPath $scheduledTasksPath -Principal $principal -Trigger $trigger -Action $action
+        $settings = New-ScheduledTaskSettingsSet -Priority 3 -AllowStartIfOnBatteries
+        Register-Scheduledtask -TaskName $taskName -TaskPath $scheduledTasksPath -Principal $principal -Trigger $trigger -Action $action -Settings $settings
     }
     
 }
