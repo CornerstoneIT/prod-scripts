@@ -6,7 +6,7 @@ trap {
     return
 }
 
-$logfile = '{0}/AppData/local/logs/MountFileShares.ps1.log' -f $env:USERPROFILE
+$logfile = '{0}/AppData/local/logs/ensureModules.ps1.log' -f $env:USERPROFILE
 
 Start-Transcript -Path $logfile -Force
 
@@ -14,7 +14,8 @@ Start-Transcript -Path $logfile -Force
 $moduleNames = @("ShoutOut", "ACGCore")
 
 "Confirming that Microsoft Code-signing cert is installed..." | Write-Host
-if ($null -eq (Get-ChildItem Cert:\ -Recurse | ? ThumbPrint -eq "a5bce29a2944105e0e25b626120264bb03499052")) {
+$storePath = "Cert:\CurrentUser\TrustedPublisher"
+if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a2944105e0e25b626120264bb03499052")) {
     "Microsoft code -igning cert (thumbprint: a5bce29a2944105e0e25b626120264bb03499052) is not installed, unable to proceed with module install." | Write-Host
 
     try {
@@ -22,7 +23,6 @@ if ($null -eq (Get-ChildItem Cert:\ -Recurse | ? ThumbPrint -eq "a5bce29a2944105
         $certURL = "https://github.com/CornerstoneIT/prod-scripts/raw/master/certs/microsoft%20code-signing.cer"
         "Donwloading cert from '{0}' to '{1}'..." -f $certURL, $f | Write-Host
         Invoke-WebRequest -Uri $certURL -OutFile $f
-        $storePath = "Cert:\LocalMachine\TrustedPublisher"
         "Trying to install certificate to '{0}'..." -f $storePath | Write-Host
         Import-Certificate -FilePath $f -CertStoreLocation $storePath
         "Certificate installed, proceeding with installation..." | Write-Host
@@ -36,7 +36,7 @@ if ($null -eq (Get-ChildItem Cert:\ -Recurse | ? ThumbPrint -eq "a5bce29a2944105
 }
 
 # TODO: Verify that PSGallery is registered as a repository and set it as "trusted"
-#Set-PSRepository -Name PSGallery -InstallationPolicy Trusted -Force
+Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
 
 "Verifying that modules are installed..." | Write-Host
 foreach($moduleName in $moduleNames) {
@@ -67,6 +67,6 @@ foreach($moduleName in $moduleNames) {
     # At this point the module should be installed.
 }
 
-#Set-PSRepository -Name PSGallery -InstallationPolicy Unrusted
+Set-PSRepository -Name PSGallery -InstallationPolicy Untrusted
 
 Stop-Transcript
