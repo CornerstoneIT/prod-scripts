@@ -48,6 +48,11 @@ $scheduledTasks = @{
     "Cornerstone User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
 }
 
+# Run-key scripts:
+$runKeyScripts = @{
+    "Cornerstone User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
+}
+
 Start-Transcript -Path $logFile
 
 # Ensure that we are not running as System 
@@ -242,6 +247,12 @@ foreach ($taskName in $scheduledTasks.Keys) {
         Register-Scheduledtask -TaskName $taskName -TaskPath $scheduledTasksPath -Principal $principal -Trigger $trigger -Action $action -Settings $settings
     }
     
+}
+
+$runKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
+foreach ($runName in $runKeyScripts) {
+    $targetValue = "Powershell -ExecutionPolicy Unrestricted -WindowStyle Hidden -File $($scriptPath)"
+    Set-ItemProperty -Path $runKey -Name $runName -Value $targetValue
 }
 
 "Done." | Write-Host
