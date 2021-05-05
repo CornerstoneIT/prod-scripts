@@ -25,7 +25,7 @@ if ($user -notlike "*\SYSTEM") {
     return
 }
 
-"Checking if '{0}' exists..." -f $bootstrapPath | Write-Out
+"Checking if '{0}' exists..." -f $bootstrapPath | Write-Host
 # Verify that the scripts are installed
 if (-not (Test-Path $bootstrapPath)) {
     $f = New-TemporaryFile

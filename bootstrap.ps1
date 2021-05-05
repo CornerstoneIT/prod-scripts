@@ -173,7 +173,7 @@ if ($installNew) {
 }
 
 
-"Trying to ensure that all modules are installed..."
+"Trying to ensure that all modules are installed..." | Write-Host
 try {
     $ensureModulesPath = "{0}\ensureModules.ps1" -f $directory.active.path
     & $ensureModulesPath -Scope AllUsers
