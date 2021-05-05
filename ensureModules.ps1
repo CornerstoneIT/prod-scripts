@@ -1,4 +1,9 @@
 
+param(
+    [ValidateSet("CurrentUser", "AllUsers")]
+    $Scope = "CurrentUser"
+)
+
 trap {
     "An unexpected error occured:" | Write-Host
     $_ | Write-Host
@@ -6,7 +11,11 @@ trap {
     return
 }
 
-$logfile = '{0}/AppData/local/logs/ensureModules.ps1.log' -f $env:USERPROFILE
+$logfile = if ($scope -eq "CurrentUser") {
+    '{0}\AppData\local\logs\ensureModules.ps1.log' -f $env:USERPROFILE
+} else {
+    "{0}\cornerstone\prod-scripts\logs\ensureModules.ps1.log" -f $env:ProgramData
+}
 
 Start-Transcript -Path $logfile -Force
 
@@ -17,7 +26,11 @@ $moduleNames = @(
 )
 
 "Confirming that Microsoft Code-signing cert is installed..." | Write-Host
-$storePath = "Cert:\CurrentUser\TrustedPublisher"
+$storePath = if ($scope -eq "CurrentUser") {
+    "Cert:\CurrentUser\TrustedPublisher"
+} else {
+    "Cert:\LocalMachine\TrustedPublisher"
+}
 if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a2944105e0e25b626120264bb03499052")) {
     "Microsoft code -igning cert (thumbprint: a5bce29a2944105e0e25b626120264bb03499052) is not installed, unable to proceed with module install." | Write-Host
 
@@ -38,7 +51,8 @@ if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a294
 
 }
 
-Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
+"Ensuring that NuGet provider is installed..." | Write-Host
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope $Scope
 
 # TODO: Verify that PSGallery is registered as a repository and set it as "trusted"
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
@@ -50,7 +64,7 @@ $m = Get-Module PowerShellGet
 if ($m.version -eq "1.0.0.1") {
     "We are using the old 1.0.0.1 version of PowerShellGet, trying to install a later version...." | Write-Host
     try {
-        Install-Module PowerShellGet -AllowClobber -Force -Scope CurrentUser
+        Install-Module PowerShellGet -AllowClobber -Force -Scope $Scope
         Remove-Module PowerShellGet
         Import-Module PowerShellGet
         $m = Get-Module PowerShellGet
@@ -69,7 +83,7 @@ foreach($moduleName in $moduleNames) {
     if ($null -eq $module) {
         # Module is not installed
         try {
-            Install-Module $moduleName -AllowClobber -Scope CurrentUser -ea Stop
+            Install-Module $moduleName -AllowClobber -Scope $Scope -ea Stop
             $module = Get-Module $moduleName -ListAvailable
             "Installed module '{0}' (version: {1})" -f $moduleName, $module.version | Write-Host
         } catch {
@@ -78,7 +92,7 @@ foreach($moduleName in $moduleNames) {
         }
     } else {
         try {
-            Update-Module $moduleName -Scope CurrentUser -ea Stop
+            Update-Module $moduleName -Scope $Scope -ea Stop
             $module = Get-Module $moduleName -ListAvailable
             "'{0}' is up-to-date (version: {1})" -f $moduleName, $module.version | Write-Host
         } catch {

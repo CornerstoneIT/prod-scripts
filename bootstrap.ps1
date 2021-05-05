@@ -173,11 +173,23 @@ if ($installNew) {
 }
 
 
-# Clean out old scheduled tasks:
-$currentScheduledTasks = Get-ScheduledTask -TaskPath $scheduledTasksPath
-foreach ($task in $currentScheduledTasks) {
-    if ($task.Name -notin $scheduledTaskSpecs.Keys) {
-        $task | Unregister-ScheduledTask -Confirm:$false
+"Trying to ensure that all modules are installed..."
+try {
+    $ensureModulesPath = "{0}\ensureModules.ps1" -f $directory.active.path
+    & $ensureModulesPath -Scope AllUsers
+} catch {
+    "EnsureModules.ps1 failed (expected location: '{0}')" -f $ensureModulesPath | Write-Host -ForegroundColoe Red
+    $_ | Write-Host
+}
+
+
+"Cleaning out old scheduled tasks.." | Write-Host
+$currentScheduledTasks = Get-ScheduledTask -TaskPath $scheduledTasksPath -ErrorAction SilentlyContinue
+if ($currentScheduledTasks) {
+    foreach ($task in $currentScheduledTasks) {
+        if ($task.Name -notin $scheduledTaskSpecs.Keys) {
+            $task | Unregister-ScheduledTask -Confirm:$false
+        }
     }
 }
 
