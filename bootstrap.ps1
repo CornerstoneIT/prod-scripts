@@ -6,10 +6,12 @@ The script will:
  - Ensure that all necessary modules are installed and add updated.
  - Verify that this script package is installed  at "C:\PogramData\Cornerstone\prod-scripts" and reinstall it if the version changes.
  - Create and ensure the existance of Scheduled tasks (under '\cornerstone\') to run the other scripts in this package.
+ - Add scripts under the registry Run key.
 
 Running this script with admin-priviledges should restore the setup to it's default state:
  - Installing any missing modules or files.
  - Recreating all scheduled tasks.
+ - Overwriting any changes under the Run key.
 #>
 
 trap {
@@ -45,7 +47,7 @@ $logFile = '{0}\bootstrap.ps1.{1}.log' -f $directory.logs.path, $a
 # Scheduled Task settings:
 $scheduledTasksPath = "\cornerstone\"
 $scheduledTasks = @{
-    "Cornerstone User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
+    # "Cornerstone User Tasks" = @{ script = '{0}\ensureModules.ps1' -f $directory.active.path }
 }
 
 # Run-key scripts:
@@ -250,7 +252,7 @@ foreach ($taskName in $scheduledTasks.Keys) {
 }
 
 $runKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-foreach ($runName in $runKeyScripts) {
+foreach ($runName in $runKeyScripts.Keys) {
     $targetValue = "Powershell -ExecutionPolicy Unrestricted -WindowStyle Hidden -File $($scriptPath)"
     Set-ItemProperty -Path $runKey -Name $runName -Value $targetValue
 }

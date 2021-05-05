@@ -8,7 +8,7 @@ $fileServername = "stofs01"
 $fileServerRoot = "\\{0}" -f $fileServername
 
 Wait-Condition { Get-Process explorer -ea SilentlyContinue }
-Wait-Condition { Test-NetConnection $fileServername -Port 445 -InformationLevel Quiet  }
+Wait-Condition { Test-NetConnection $fileServername -Port 445 -InformationLevel Quiet  } -IntervalMS 1000
 
 $sharesRaw = net view $fileServerRoot
 $sharesRaw | Write-Host
