@@ -38,7 +38,7 @@ if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a294
 
 }
 
-Install-PackageProvider -Name NuGet -Scope CurrentUser -ForceBootstrap
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Scope CurrentUser
 
 # TODO: Verify that PSGallery is registered as a repository and set it as "trusted"
 Set-PSRepository -Name PSGallery -InstallationPolicy Trusted
