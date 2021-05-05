@@ -46,13 +46,13 @@ $logFile = '{0}\bootstrap.ps1.{1}.log' -f $directory.logs.path, $a
 
 # Scheduled Task settings:
 $scheduledTasksPath = "\cornerstone\"
-$scheduledTasks = @{
+$scheduledTaskSpecs = @{
     # "Cornerstone User Tasks" = @{ script = '{0}\ensureModules.ps1' -f $directory.active.path }
 }
 
 # Run-key scripts:
 $runKeyScripts = @{
-    "Cornerstone User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
+    "User Tasks" = @{ script = '{0}\userTasks.ps1' -f $directory.active.path }
 }
 
 Start-Transcript -Path $logFile
@@ -172,6 +172,15 @@ if ($installNew) {
 
 }
 
+
+# Clean out old scheduled tasks:
+$currentScheduledTasks = Get-ScheduledTask -TaskPath $scheduledTasksPath
+foreach ($task in $currentScheduledTasks) {
+    if ($task.Name -notin $scheduledTaskSpecs.Keys) {
+        $task | Unregister-ScheduledTask -Confirm:$false
+    }
+}
+
 $validateTask = {
     <# A task already exists, verify that it is correct:
         - TaskPath is '\cornerstone\'
@@ -217,8 +226,9 @@ $validateTask = {
     return $true
 }
 
-foreach ($taskName in $scheduledTasks.Keys) {
-    $t = $scheduledTasks[$taskName]
+# Add/Update tasks:
+foreach ($taskName in $scheduledTaskSpecs.Keys) {
+    $t = $scheduledTaskSpecs[$taskName]
     $t.task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
     $t.preexisting = $null -ne $t.task
 
@@ -248,13 +258,28 @@ foreach ($taskName in $scheduledTasks.Keys) {
         $settings = New-ScheduledTaskSettingsSet -Priority 3 -AllowStartIfOnBatteries
         Register-Scheduledtask -TaskName $taskName -TaskPath $scheduledTasksPath -Principal $principal -Trigger $trigger -Action $action -Settings $settings
     }
-    
 }
 
 $runKey = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Run"
-foreach ($runName in $runKeyScripts.Keys) {
+$runKeyNames = $runKeyScripts.Keys
+foreach ($runName in $runKeyNames) {
+    $scriptPath = $runKeyScripts[$runName].script
     $targetValue = "Powershell -ExecutionPolicy Unrestricted -WindowStyle Hidden -File $($scriptPath)"
-    Set-ItemProperty -Path $runKey -Name $runName -Value $targetValue
+    $propName = "[Cornerstone] {0}" -f $runName
+    Set-ItemProperty -Path $runKey -Name $propName -Value $targetValue
+}
+
+$runKeyPropsObj = Get-ItemProperty $runKey
+$runKeyPropNames = $runKeyPropsObj | Get-Member -MemberType NoteProperty | ForEach-Object Name
+foreach ($runPropName in $runKeyPropNames) {
+    if ($runPropName -match "^\[cornerstone\] (?<runName>.+)") {
+        $runName = $Matches.runName
+        if ($runName -notin $runKeyNames) {
+            Remove-ItemProperty $runKey -Name $runPropName
+        }
+    } else {
+        continue
+    }
 }
 
 "Done." | Write-Host
