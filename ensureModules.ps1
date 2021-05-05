@@ -14,7 +14,14 @@ trap {
 $logfile = if ($scope -eq "CurrentUser") {
     '{0}\AppData\local\logs\ensureModules.ps1.log' -f $env:USERPROFILE
 } else {
-    "{0}\cornerstone\prod-scripts\logs\ensureModules.ps1.log" -f $env:ProgramData
+    $i = whoami.exe
+    $d, $u = $i.split("\")
+    $a = if ($u) {
+        "{0}@{1}" -f $u, $d
+    } else {
+        $d
+    }
+    "{0}\cornerstone\prod-scripts\logs\ensureModules.ps1.{1}.log" -f $env:ProgramData, $a
 }
 
 Start-Transcript -Path $logfile -Force

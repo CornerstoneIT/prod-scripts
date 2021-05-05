@@ -1,7 +1,4 @@
 <#
-This script should be added to Intune to run on all relevant Windows 10 clients.
-It should NOT run with user credentials.
-
 The script will:
  - Ensure that all necessary modules are installed and add updated.
  - Verify that this script package is installed  at "C:\PogramData\Cornerstone\prod-scripts" and reinstall it if the version changes.
@@ -12,6 +9,9 @@ Running this script with admin-priviledges should restore the setup to it's defa
  - Installing any missing modules or files.
  - Recreating all scheduled tasks.
  - Overwriting any changes under the Run key.
+
+This script should be runnable from anywhere and not rely on any other files, as it will be
+used to download and install the rest of the scripts.
 #>
 
 trap {
