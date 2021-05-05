@@ -38,11 +38,11 @@ $storePath = if ($scope -eq "CurrentUser") {
 } else {
     "Cert:\LocalMachine\TrustedPublisher"
 }
-if ($null -eq (Get-ChildItem $storePath -Recurse | ? ThumbPrint -eq "a5bce29a2944105e0e25b626120264bb03499052")) {
+if ($null -eq (Get-ChildItem $storePath -Recurse | Where-Object ThumbPrint -eq "a5bce29a2944105e0e25b626120264bb03499052")) {
     "Microsoft code -igning cert (thumbprint: a5bce29a2944105e0e25b626120264bb03499052) is not installed, unable to proceed with module install." | Write-Host
 
     try {
-        $f = New-TemporaryFile | % FullName
+        $f = New-TemporaryFile | ForEach-Object FullName
         $certURL = "https://github.com/CornerstoneIT/prod-scripts/raw/master/certs/microsoft%20code-signing.cer"
         "Donwloading cert from '{0}' to '{1}'..." -f $certURL, $f | Write-Host
         Invoke-WebRequest -Uri $certURL -OutFile $f

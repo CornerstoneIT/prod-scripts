@@ -27,7 +27,7 @@ for ($i = $listStart; $i -lt $listSize; $i++) {
 		try {
 			
 			try {
-				$driveLetter = cat "$($sharePath)\.mount" -ea Stop
+				$driveLetter = Get-Content "$($sharePath)\.mount" -ea Stop
 			} catch {
 				$_ | Write-Host -Foreground Red
 				"Unable to access fileshare."
@@ -38,7 +38,7 @@ for ($i = $listStart; $i -lt $listSize; $i++) {
 				$m | Remove-SMBMapping -Confirm:$false -UpdateProfile
 			}
 			
-			if ($v = Get-Volume $driveLetter -ea SilentlyContinue) {
+			if (Get-Volume $driveLetter -ea SilentlyContinue) {
 				"Drive letter '{0}' for the share collides with a local volume, skipping." -f $driveLetter | Write-Host -Foreground Yellow
 				continue
 			}
@@ -48,7 +48,7 @@ for ($i = $listStart; $i -lt $listSize; $i++) {
 			}
 			
 			"Mapping as network drive ({0} -> {1})..." -f $driveLetter, $sharePath | write-Host
-			$drive = New-PSDrive -Name $driveLetter -Root $sharePath -PSProvider FileSystem -Description $shareName -Scope Global -Persist
+			New-PSDrive -Name $driveLetter -Root $sharePath -PSProvider FileSystem -Description $shareName -Scope Global -Persist
 			(New-Object -ComObject Shell.Application).NameSpace("$($driveLetter):").Self.Name = $shareName
 			
 		} catch {
