@@ -21,6 +21,8 @@ trap {
     return
 }
 
+$bootstrapTaskName = "Cornerstone Bootstrap"
+
 # Intended Directory structure:
 $directory = @{
     root = @{ path = '{0}\Cornerstone\prod-scripts' -f $env:ProgramData; type="folder" }
@@ -45,7 +47,8 @@ $a = if ($u) {
 $logFile = '{0}\bootstrap.ps1.{1}.log' -f $directory.logs.path, $a
 
 # Scheduled Task settings:
-$scheduledTasksPath = "\cornerstone\"
+$scheduledTasksRootPath = "\cornerstone\"
+$scheduledTasksPath = "\cornerstone\scripts"
 $scheduledTaskSpecs = @{
     # "Cornerstone User Tasks" = @{ script = '{0}\ensureModules.ps1' -f $directory.active.path }
 }
@@ -128,48 +131,63 @@ if ($directory.active.preexisting) {
 
 if ($installNew) {
 
+    $useNewScripts = $true
+
     try {
         "Downloading the scripts archive to {0}..." -f $dlDstPath | Write-Host
         Invoke-WebRequest -Method Get -Uri $archiveURL -OutFile $dlDstPath -ErrorAction Stop
     } catch {
-        "Failed to donwload scripts" | Write-Host
-        # TODO: Deal with it and quit.
-    }
-
-    $useNewScripts = $true
-    $tmpInstallPath = "{0}\{1}" -f $directory.tmp.path, [guid]::NewGuid()
-    $newInstallPath = "{0}\{1}" -f $directory.root.path, [guid]::NewGuid()
-
-    try {
-        "Extracting archive to '{0}'..." -f $tmpInstallPath | Write-Host
-        Expand-Archive -Path $dlDstPath -DestinationPath $tmpInstallPath -ErrorAction Stop
-        "Moving files to {0}..." -f $newInstallPath | Write-Host
-        Move-Item "$tmpInstallPath\prod-scripts-master" -Destination $newInstallPath
-        Remove-Item $tmpInstallPath -Recurse
-        "Removing archive file..." | Write-Host
-        Remove-Item $dlDstPath -Force
-    } catch {
-        "Failed to extract the scripts, do not upgrade." | Write-Host
+        "Failed to download new scripts:" | Write-Host
+        $_ | Write-Host
         $useNewScripts = $false
-        if (Test-Path $newInstallPath) {
-            Remove-Item $newInstallPath -Recurseq -Force
-        }
     }
 
     if ($useNewScripts) {
-        "Performing the installation..." | Write-Host
-        if ($directory.active.preexisting) {
-            "Remove old install..." | Write-Host
-            $f = $directory.active
-            $currentInstallPath = $f.item.target
-            Remove-Item $f.path -Recurse -Force
-            Remove-Item $currentInstallPath -Recurse -Force
-        }
-        
-        "Activating new install..." | Write-Host
-        New-Item -ItemType Junction -Path $directory.active.path -Target "$newInstallPath"
-    }
+        $tmpInstallPath = "{0}\{1}" -f $directory.tmp.path, [guid]::NewGuid()
+        $newInstallPath = "{0}\{1}" -f $directory.root.path, [guid]::NewGuid()
 
+        try {
+            "Extracting archive to '{0}'..." -f $tmpInstallPath | Write-Host
+            Expand-Archive -Path $dlDstPath -DestinationPath $tmpInstallPath -ErrorAction Stop
+            "Moving files to {0}..." -f $newInstallPath | Write-Host
+            Move-Item "$tmpInstallPath\prod-scripts-master" -Destination $newInstallPath
+            Remove-Item $tmpInstallPath -Recurse
+            "Removing archive file..." | Write-Host
+            Remove-Item $dlDstPath -Force
+        } catch {
+            "Failed to extract the scripts, do not upgrade." | Write-Host
+            $useNewScripts = $false
+            if (Test-Path $newInstallPath) {
+                Remove-Item $newInstallPath -Recurse -Force
+            }
+        }
+
+        if ($useNewScripts) {
+            "Performing the installation..." | Write-Host
+            if ($directory.active.preexisting) {
+                "Remove old install..." | Write-Host
+                $f = $directory.active
+                $currentInstallPath = $f.item.target
+                Remove-Item $f.path -Recurse -Force
+                Remove-Item $currentInstallPath -Recurse -Force
+            }
+            
+            "Activating new install..." | Write-Host
+            New-Item -ItemType Junction -Path $directory.active.path -Target "$newInstallPath"
+
+            "Trying to restarting bootstrap to ensure we are using the lastest files..." | Write-Host
+            try {
+                $task = Get-ScheduledTask -TaskName $bootstrapTaskName -TaskPath $scheduledTasksRootPath -ErrorAction Stop
+                $task | Start-ScheduledTask -ErrorAction Stop
+
+                Stop-Transcript
+                return
+            } catch {
+                "Failed to restart bootstrap:" | Write-Host
+                $_ | Write-Host
+            }
+        }
+    }
 }
 
 
@@ -195,7 +213,7 @@ if ($currentScheduledTasks) {
 
 $validateTask = {
     <# A task already exists, verify that it is correct:
-        - TaskPath is '\cornerstone\'
+        - TaskPath is '\cornerstone\scripts\'
         - Only 1 action
         - Action should be: Powershell -ExecutionPolicy Unrestricted $t.script
         - Run as "Users" group
@@ -278,6 +296,7 @@ foreach ($runName in $runKeyNames) {
     $scriptPath = $runKeyScripts[$runName].script
     $targetValue = "Powershell -ExecutionPolicy Unrestricted -WindowStyle Hidden -File $($scriptPath)"
     $propName = "[Cornerstone] {0}" -f $runName
+    "Setting 'Run'-key script: {0} -> '{1}'" -f $runName, $scriptPath | Write-Host
     Set-ItemProperty -Path $runKey -Name $propName -Value $targetValue
 }
 
@@ -287,6 +306,7 @@ foreach ($runPropName in $runKeyPropNames) {
     if ($runPropName -match "^\[cornerstone\] (?<runName>.+)") {
         $runName = $Matches.runName
         if ($runName -notin $runKeyNames) {
+            "Removing 'Run'-key script: {0}" -f $runPropName
             Remove-ItemProperty $runKey -Name $runPropName
         }
     } else {

@@ -12,7 +12,7 @@ startup if such a task has not already been created.
 
 $installPath = "{0}\cornerstone\prod-scripts" -f $env:ProgramData
 $bootstrapPath = "{0}\active\bootstrap.ps1" -f $installPath
-$installLog  = "{0}\logs\shoestring.log" -f $installPath
+$installLog  = "{0}\logs\shoelace.log" -f $installPath
 $bootstrapURI = "https://raw.githubusercontent.com/CornerstoneIT/prod-scripts/master/bootstrap.ps1"
 
 Start-Transcript -Path $installLog
@@ -47,8 +47,23 @@ if (-not (Test-Path $bootstrapPath)) {
 }
 
 # Verify that there is a scheduled task to run the bootstrap script.
+$taskPath = "\cornerstone\"
 $taskName = "Cornerstone Bootstrap"
 $task = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
+
+if (($null -ne $task) -and ($task.TaskPath -ne $taskPath)) {
+    "Task found, but is at the wrong TaskPath: {0}" -f $task.TaskPath | Write-Host
+    "Trying to unregister the task..." | Write-Host
+    try {
+        $task | Unregister-ScheduledTask -Confirm:$false -ErrorAction Stop
+        $task = $null
+        "Task removed." | Write-Host
+    } catch {
+        "Failed to unregister the task:" | Write-Host
+        $_ | Write-Host
+
+    }
+}
 
 if ($null -eq $task) {
     try {
@@ -57,7 +72,11 @@ if ($null -eq $task) {
         $principal = New-ScheduledTaskPrincipal -UserId SYSTEM -RunLevel Highest
         $action = New-ScheduledTaskAction -Execute "Powershell" -Argument "-ExecutionPolicy Unrestricted -File $($bootstrapPath)"
         $settings = New-ScheduledTaskSettingsSet -Priority 3 -AllowStartIfOnBatteries
-        Register-Scheduledtask -TaskName $taskName -TaskPath "\" -Principal $principal -Trigger $trigger -Action $action -Settings $settings
+        $task = Register-Scheduledtask -TaskName $taskName -TaskPath $taskPath -Principal $principal -Trigger $trigger -Action $action -Settings $settings
+        "Task registered: " | Write-Host
+        $task | Write-Host
+        "Starting task..."
+        $task | Start-ScheduledTask
     } catch {
         Write-Host $_
         return
