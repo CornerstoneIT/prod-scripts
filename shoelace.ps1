@@ -25,22 +25,22 @@ if ($user -notlike "*\SYSTEM") {
     return
 }
 
-"Checking if '{0}' exists..." -f $bootstrapPath | Write-Host
 # Verify that the scripts are installed
+"Checking if '{0}' exists..." -f $bootstrapPath | Write-Host
 if (-not (Test-Path $bootstrapPath)) {
-    $f = New-TemporaryFile
+    $f = "{0}\bootstrap.tmp.ps1" -f $installPath
     try {
         "Running bootstrap.ps1 to install scripts..." | Write-Host
-        "Downloading bootstrap.ps1 to '{0}'..." | Write-Host
-        Invoke-WebRequest -Uri $bootstrapURI -OutFile $f.FullName
+        "Downloading bootstrap.ps1 to '{0}'..." -f $f | Write-Host
+        Invoke-WebRequest -Uri $bootstrapURI -OutFile $f -ErrorAction Stop
         "Running bootstrap..."
-        & $f.FullName
+        & $f
+        Remove-Item $f
     } catch {
+        "Failed to download scripts:" | Write-Host
         Write-Host $_
         Stop-Transcript
         return
-    } finally {
-        Remove-Item $f
     }
 } else {
     "bootstrap.ps1 found."
