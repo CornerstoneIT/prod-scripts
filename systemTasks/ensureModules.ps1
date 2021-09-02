@@ -104,6 +104,7 @@ foreach($moduleName in $moduleNames) {
             "'{0}' is up-to-date (version: {1})" -f $moduleName, $module.version | Write-Host
         } catch {
             "Failed to update '{0}'" -f $moduleName | Write-Host -ForegroundColor Red
+            $_ | Write-Host
             # This may be ok, try to proceed with configuration.
         }
     }

@@ -190,16 +190,14 @@ if ($installNew) {
     }
 }
 
-
-"Trying to ensure that all modules are installed..." | Write-Host
+"Running SYSTEM tasks..." | Write-Host
 try {
-    $ensureModulesPath = "{0}\ensureModules.ps1" -f $directory.active.path
-    & $ensureModulesPath -Scope AllUsers
+    $systemTasksScript = "{0}\systemTasks.ps1" -f $directory.active.path
+    & $systemTasksScript
 } catch {
-    "EnsureModules.ps1 failed (expected location: '{0}')" -f $ensureModulesPath | Write-Host -ForegroundColoe Red
+    "systemTasks.ps1 failed (expected location: '{0}')" -f $systemTasksScript | Write-Host -ForegroundColor Red
     $_ | Write-Host
 }
-
 
 "Cleaning out old scheduled tasks.." | Write-Host
 $currentScheduledTasks = Get-ScheduledTask -TaskPath $scheduledTasksPath -ErrorAction SilentlyContinue
