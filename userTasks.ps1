@@ -1,2 +1,2 @@
-& "$PSScriptRoot\MountFileShares.ps1"
-& "$PSScriptRoot\RedirectSignatures.ps1"
+& "$PSScriptRoot\userTasks\MountFileShares.ps1"
+& "$PSScriptRoot\userTasks\RedirectSignatures.ps1"
