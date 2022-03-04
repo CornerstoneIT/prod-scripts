@@ -4,6 +4,13 @@ $logfile = '{0}/AppData/local/logs/MountFileShares.ps1.log' -f $env:USERPROFILE
 
 Start-Transcript -Path $logfile -Force
 
+trap {
+	"An unexpected error occured:" | Write-Host
+	$_ | Write-Host
+	Stop-Transcript
+	return 
+}
+
 $fileServername = "stofs01"
 $fileServerRoot = "\\{0}" -f $fileServername
 
