@@ -19,12 +19,4 @@ $scriptsToRun = @{
     }
 }
 
-foreach($script in $scriptsToRun.GetEnumerator()) {
-    try {
-        $script.Value.msg | Write-Host
-        & $script.Value.script
-    } catch {
-        "{0} failed (defined as: '{1}')" -f $script.Name, $script.Value.script | Write-Host -ForegroundColor Red
-        $_ | Write-Host
-    }
-}
+& "$PSScriptRoot\runScripts.ps1" $scriptsToRun
