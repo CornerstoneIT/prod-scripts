@@ -8,9 +8,13 @@ $cmd = "net view {0}" -f $serverRoot
 "getShareList.ps1: Running '$cmd'..." | Write-Debug
 $shareListRaw = net view $serverRoot *>&1
 
+if ($shareListRaw -is [string]) {
+    $shareListRaw.split("`n")
+}
+
 switch -Regex ($shareListRaw[0]) {
     # Error Case:
-    "^[a-z0-9 ]+(?<ErrorNum>[0-9]+)" {
+    "^[\w ]+(?<ErrorNum>[0-9]+)" {
         "getShareList.ps1: Error returned from '{0}': {1}" -f $cmd, $shareListRaw[0] | Write-Debug
         return @{
             Success = $false
@@ -20,14 +24,14 @@ switch -Regex ($shareListRaw[0]) {
     }
 
     # Success Case:
-    "^[a-z0-9 ]+ \\\\$serverName\\" {
+    "^[\w ]+ \\\\$serverName\\" {
         "getShareList.ps1: Successfully listed network share with '{0}'." -f $cmd | Write-Debug
         $result = @{
-            Success=$true
+            Success=$tru
             Raw = $shareListRaw
         }
 
-        $headingPattern = "^(?<NameField>(([ ](?![\s]))|[a-z0-9])+\s+)(?<TypeField>(([ ](?![\s]))|[a-z0-9])+\s+)(?<UsageField>(([ ](?![\s]))|[a-z0-9])+\s+)"
+        $headingPattern = "^(?<NameField>(([ ](?![\s]))|[\w])+\s+)(?<TypeField>(([ ](?![\s]))|[\w])+\s+)(?<UsageField>(([ ](?![\s]))|[\w])+\s+)"
         $headingFields = @{}
         
         
