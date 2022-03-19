@@ -57,13 +57,13 @@ try {
 
     $params = @{
         #replace with data captured from your sharepoint site.
-        siteId    = "{bab9222d-84ab-439f-baf1-b81e4c354ffd}"
-        webId     = "{e91472b5-8250-43f9-b621-2117a9d4dcc1}"
-        listId    = "{706AAAAD-BF3A-4FF3-8A7F-81AB3A392D58}"
+        siteId    = "{cc7892cc-fe8d-41e0-800c-ecb9436cab33}"
+        webId     = "{a94a760f-3ca5-4247-a646-9bf304a75757}"
+        listId    = "{d76383fe-40ae-44ae-ab81-165e26b5394b}"
         userEmail = $userUpn
-        webUrl    = "https://addskillsab.sharepoint.com/sites/OfficeTemplates"
+        webUrl    = "https://cornerstonegroupab.sharepoint.com/sites/OfficeTemplates"
         webTitle  = "OfficeTemplates"
-        listTitle = "Documents"
+        listTitle = "Standard"
     }
 	$OrganisationDisplayName = "Cornerstone Group AB"
 	
