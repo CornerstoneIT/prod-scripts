@@ -17,18 +17,53 @@ $fileServerRoot = "\\{0}" -f $fileServername
 Wait-Condition { Get-Process explorer -ea SilentlyContinue }
 Wait-Condition { Test-NetConnection $fileServername -Port 445 -InformationLevel Quiet  } -IntervalMS 1000
 
-$sharesRaw = net view $fileServerRoot
-$sharesRaw | Write-Host
+$storeCredentialpath = "{0}\.oldcred" -f $env:APPDATA
+$credential = $null
+$sharesResult = $null
+$newCredential = $null
 
-$sharesArray = $sharesRaw.split("`n")
-$listStart = $sharesArray.indexOf('-'*79) + 1
-$listSize   = $sharesArray.length
+do {
+	$sharesResult = & "$PSScriptRoot\MountFileShares\getShareList.ps1" $fileServerName
+	$sharesResult | Out-String | Write-Debug
+	if (!$sharesResult.Success) {
+		#  Check if the error is an access denied error:
+		if ($sharesResult.Error -eq 5) {
+			
+			# Check if we have stored credentials we can use:
+			if ($null -eq $credential -and (Test-Path $storeCredentialpath -PathType Leaf)) {
+				$credential = Load-Credential -Path $storeCredentialpath
+				if ($credential) {
+					$cmd = 'net use {0} "{1}" /USER:{2}' -f $fileServerRoot, (~ $credential.Password), $credential.UserName
+					$cmd | Write-Debug
+					Invoke-Expression $cmd
+					continue
+				}
+			}
 
-for ($i = $listStart; $i -lt $listSize; $i++) {
-	"Line: {0}" -f $i | Write-Host
-	if ($sharesArray[$i] -match "^(?<name>[^\s]+)\s+disk") {
-		$shareName = $matches.name
-		"Share found: {0}" -f $shareName | Write-Host
+			# We have tried to use the store credentials, ask for new credentials:
+			$newCredential = Get-Credential -Message "Attempting connection to file server ($fileServerName), please provide your old credentials:"
+			if ($null -eq $newCredential) {
+				"No credentials Provided, aborting share mounting..." | Write-Debug
+				Stop-Transcript
+				return
+			}
+
+			$cmd = 'net use {0} "{1}" /USER:{2}' -f $fileServerRoot, (~ $newCredential.Password), $newCredential.UserName
+			$cmd | Write-Debug
+			Invoke-Expression $cmd
+		} else {
+			break
+		}
+	} else {
+		if ($newCredential) {
+			Save-Credential -Path $storeCredentialpath -Credential $newCredential
+		}
+	}
+} while(!$sharesResult.Success)
+
+$mountShare = {
+	Param($ShareName)
+	"Share found: {0}" -f $shareName | Write-Host
 		$sharePath = "{0}\{1}" -f $fileServerRoot, $shareName
 		
 		try {
@@ -61,7 +96,10 @@ for ($i = $listStart; $i -lt $listSize; $i++) {
 		} catch {
 			write-Host $_
 		}
-	}
+}
+
+foreach($shareName in $sharesResult.Shares) {
+	. $mountShare $ShareName
 }
 
 Stop-Transcript

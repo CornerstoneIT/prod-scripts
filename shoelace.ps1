@@ -43,7 +43,7 @@ if (-not (Test-Path $bootstrapPath)) {
         return
     }
 } else {
-    "bootstrap.ps1 found."
+    "bootstrap.ps1 found." | Write-Host
 }
 
 # Verify that there is a scheduled task to run the bootstrap script.
