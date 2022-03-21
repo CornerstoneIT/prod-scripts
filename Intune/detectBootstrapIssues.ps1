@@ -16,7 +16,7 @@ Start-Transcript $detectionLog
 trap {
     "Unexpected stopping error while performing detection: {0}" -f $_ | Write-Host
     Stop-Transcript
-    exit 0
+    exit 1
 }
 
 # Check that we are running as SYSTEM
@@ -24,7 +24,7 @@ $user = whoami
 if ($user -notlike "*\SYSTEM") {
     "Not running as SYSTEM. Quitting." | Write-Host
     Stop-Transcript
-    exit 0
+    exit 1
 }
 
 if (-not (Test-path -Path $ActiveInstallPath -PathType Container)) {
@@ -39,7 +39,7 @@ if (-not (Test-Path -Path $ActiveInstallVersionPath -PathType Leaf)) {
     exit 1
 }
 
-$latestVersion = [version](Invoke-WebRequest -Uri $versionURI | Foreach-Object Content)
+$latestVersion = [version](Invoke-WebRequest -Uri $versionURI -UseBasicParsing | Foreach-Object Content)
 $activeVersion = [version](Get-Content -Path $ActiveInstallVersionPath)
 
 if ($latestVersion -gt $activeVersion) {
