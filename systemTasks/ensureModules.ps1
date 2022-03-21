@@ -92,7 +92,7 @@ foreach($moduleName in $moduleNames) {
         try {
             Install-Module $moduleName -AllowClobber -Scope $Scope -ea Stop
             $module = Get-Module $moduleName -ListAvailable
-            "Installed module '{0}' (version: {1})" -f $moduleName, $module.version | Write-Host
+            "Installed module '{0}' (latest version: {1})" -f $moduleName, ($module.version | Sort-Object | Select-Object -Last 1) | Write-Host
         } catch {
             "Install of '{0}' failed." -f $moduleName  | Write-host -ForegroundColor Red
             # TODO: Deal with it and quit.
@@ -101,7 +101,7 @@ foreach($moduleName in $moduleNames) {
         try {
             Update-Module $moduleName -Scope $Scope -ea Stop
             $module = Get-Module $moduleName -ListAvailable
-            "'{0}' is up-to-date (version: {1})" -f $moduleName, $module.version | Write-Host
+            "'{0}' is up-to-date (latest version: {1})" -f $moduleName, ($module.version | Sort-Object | Select-Object -Last 1) | Write-Host
         } catch {
             "Failed to update '{0}'" -f $moduleName | Write-Host -ForegroundColor Red
             $_ | Write-Host
