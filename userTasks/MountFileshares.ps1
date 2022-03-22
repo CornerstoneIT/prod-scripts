@@ -17,6 +17,10 @@ $fileServerRoot = "\\{0}" -f $fileServername
 Wait-Condition { Get-Process explorer -ea SilentlyContinue }
 Wait-Condition { Test-NetConnection $fileServername -Port 445 -InformationLevel Quiet  } -IntervalMS 1000
 
+# Quick patch to fix "second run" bug where the OS tries to use the credentials
+# of the logged on user to connect to already mapped drives.
+Get-SMBMapping -RemotePath "$fileServerRoot*" | Remove-SmbMapping -Confirm:$false
+
 $storeCredentialpath = "{0}\.oldcred" -f $env:APPDATA
 $credential = $null
 $sharesResult = $null
