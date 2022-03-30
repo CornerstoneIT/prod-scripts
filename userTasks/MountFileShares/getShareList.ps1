@@ -27,7 +27,7 @@ switch -Regex ($shareListRaw[0]) {
     "^[\w ]+ \\\\$serverName\\" {
         "getShareList.ps1: Successfully listed network share with '{0}'." -f $cmd | Write-Debug
         $result = @{
-            Success=$tru
+            Success=$true
             Raw = $shareListRaw
         }
 
